@@ -52,8 +52,6 @@ jobs:
           # riscv64 isn't supported by Ubuntu 18.04
           - ubuntu: 22.04
             platform: linux/riscv64
-          - ubuntu: 18.04
-            platform: windows/amd64
     steps:
       - name: Set env
         shell: bash
