@@ -31,6 +31,7 @@ import (
 	"golang.org/x/sys/unix"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
+	"github.com/container-orchestrated-devices/container-device-interface/pkg/cdi"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	customopts "github.com/containerd/containerd/pkg/cri/opts"
 	osinterface "github.com/containerd/containerd/pkg/os"
@@ -154,6 +155,18 @@ func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 
 	if !c.config.DisableCgroup {
 		specOpts = append(specOpts, customopts.WithDefaultSandboxShares)
+	}
+
+	// Add devices from CDI annotations
+	_, devsFromAnnotations, err := cdi.ParseAnnotations(config.Annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CDI device annotations: %w", err)
+	}
+
+	for _, devs := range devsFromAnnotations {
+		specOpts = append(specOpts,
+			customopts.WithAnnotation(annotations.SandboxCDIDevices, devs),
+		)
 	}
 
 	if res := config.GetLinux().GetResources(); res != nil {
