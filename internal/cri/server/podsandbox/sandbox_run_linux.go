@@ -17,17 +17,20 @@
 package podsandbox
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/containerd/containerd/v2/pkg/oci"
+	"github.com/containerd/log"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
 	"golang.org/x/sys/unix"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
+	"tags.cncf.io/container-device-interface/pkg/cdi"
 
 	"github.com/containerd/containerd/v2/core/snapshots"
 	"github.com/containerd/containerd/v2/internal/cri/annotations"
@@ -64,6 +67,17 @@ func (c *Controller) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 		if config.GetLinux().GetCgroupParent() != "" {
 			cgroupsPath := getCgroupsPath(config.GetLinux().GetCgroupParent(), id)
 			specOpts = append(specOpts, oci.WithCgroup(cgroupsPath))
+		}
+	}
+
+	podResourceConfig := config.GetPodResources()
+
+	log.G(context.TODO()).Debugf("PodResourceConfig: %+v", podResourceConfig)
+
+	for _, container := range podResourceConfig.GetContainers() {
+		for _, cdiDevice := range container.CDIDevices {
+			specOpts = append(specOpts,
+				customopts.WithAnnotation(cdi.AnnotationPrefix+"sandbox", cdiDevice.Name))
 		}
 	}
 
